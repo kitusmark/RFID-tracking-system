@@ -24,6 +24,14 @@
 #define OFF 0
 #define ON 1
 
+//Define LCD Messages
+#define COMPANY "RepRapBCN"
+#define NFC "NFC"
+#define PRODUCT "Tracking System"
+#define CORRECT_READING "Card Readed"
+#define WRONG_READING "Reading error!"
+
+
 //Let's declare a LCD object
 Adafruit_RGBLCDShield lcd = Adafruit_RGBLCDShield();
 //Let's declare a NFC object too!
@@ -31,9 +39,9 @@ Adafruit_NFCShield_I2C nfc(IRQ, RESET);
 
 //Global Scope Variables
 boolean backlightState = ON;
-  uint8_t success;
-  uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };  // Buffer to store the returned UID
-  uint8_t uidLength;                        // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
+uint8_t success;
+uint8_t uid[] = { 0, 0, 0, 0, 0, 0, 0 };  // Buffer to store the returned UID
+uint8_t uidLength;                        // Length of the UID (4 or 7 bytes depending on ISO14443A card type)
 
 //--------------------------------SETUP---------------------------------------
 void setup() {
@@ -41,12 +49,13 @@ void setup() {
   Serial.begin(9600);
   
   //LCD's Setup and init
+  Serial.println("Setting up the LCD display");
   lcd.begin(16,2); // Set the number of columns and rows
   lcd.setBacklight(WHITE);
   lcd.setCursor(1,0);
-  lcd.print("RepRapBCN NFC");
+  lcd.print(COMPANY);lcd.print(" ");lcd.print(NFC);
   lcd.setCursor(0,1);
-  lcd.print("Tracking System");
+  lcd.print(PRODUCT);
   
   nfc.begin();
   
@@ -85,8 +94,9 @@ void loop() {
 //----------------------------FUNCTIONS-----------------------------------
 
 void handleButtons (uint8_t buttons) {
-     // This part takes care of button pressings
+     // This part takes care of button pressings 
     if (buttons) {
+      Serial.println("Button pressed...");
     if (buttons & BUTTON_UP) {
       Serial.println("UP button pressed");
     }
@@ -122,6 +132,15 @@ void handleNFCReading (uint8_t success) {
     nfc.PrintHex(uid, uidLength);
     Serial.println("");
     
+    if (uidLength == 4) {
+      lcd.print(CORRECT_READING);
+    } else {
+      lcd.print(WRONG_READING);
+    }
+    delay(1000);
+    lcd.clear();
+    
+    /*
     if (uidLength == 4)
     {
       // We probably have a Mifare Classic card ... 
@@ -193,6 +212,8 @@ void handleNFCReading (uint8_t success) {
       {
         Serial.println("Ooops ... unable to read the requested page!?");
       }
-    }
+    }*/
   }
-}-+-
+  
+
+} //End of handleNFCReading()

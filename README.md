@@ -10,11 +10,11 @@ This system is aimed to be as independent and autonomous as possible in order to
 
 ###Things to do
 
-- [ ] Solder all the components and test it out
-- [ ] figure out if our cards work properly
+- [x] Solder all the components and test it out
+- [x] figure out if our cards work properly
 - [ ] Code for the LCD. Menu and messages
 - [ ] Code the tracking system with data storage
-- [ ] Ensure sleep mode during day
+- [ ] Ensure sleep mode during unused hours
 - [ ] Design and print a 3D case for the system
 - [ ] Post some pictures on the repo
 
