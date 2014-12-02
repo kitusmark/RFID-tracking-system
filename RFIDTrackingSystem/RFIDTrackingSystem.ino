@@ -18,6 +18,7 @@
 #include <Adafruit_NFCShield_I2C.h>
 
 // Defines
+#define DS1307_ADDRESS 0x68 //Address for the RTC Module I2C protocol
 #define IRQ   2 //Interrupt pin used to detect the Mifare Card
 #define RESET 3  // Not connected by default on the NFC Shield
 #define WHITE 0x7 //Background color
@@ -37,9 +38,24 @@ boolean backlightState = ON;
 
 //--------------------------------SETUP---------------------------------------
 void setup() {
+  //First we're going to setup the timer interrupt for the Time Reading
+  cli(); //Stop all interrupts
+  //set timer1 interrupt at 1Hz
+  TCCR1A = 0;      // set entire TCCR1A register to 0
+  TCCR1B = 0;      // same for TCCR1B
+  TCNT1  = 0;      //initialize counter value to 0
+  // set compare match register for 1hz increments
+  OCR1A = 15624;   // = (16*10^6) / (1*1024) - 1 (must be <65536)
+  // turn on CTC mode
+  TCCR1B |= (1 << WGM12);
+  // Set CS10 and CS12 bits for 1024 prescaler
+  TCCR1B |= (1 << CS12) | (1 << CS10);  
+  // enable timer compare interrupt
+  TIMSK1 |= (1 << OCIE1A);
+  sei(); //Allow all interrupts
   // put your setup code here, to run once:
   Serial.begin(9600);
-  
+  Wire.begin();
   //LCD's Setup and init
   lcd.begin(16,2); // Set the number of columns and rows
   lcd.setBacklight(WHITE);
@@ -80,6 +96,7 @@ void loop() {
   // if the uid is 4 bytes (Mifare Classic) or 7 bytes (Mifare Ultralight)
   success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
   handleNFCReading(success);
+  
 }
 
 //----------------------------FUNCTIONS-----------------------------------
@@ -195,4 +212,46 @@ void handleNFCReading (uint8_t success) {
       }
     }
   }
-}-+-
+}
+
+byte bcdToDec(byte val)  {
+// Convert binary coded decimal to normal decimal numbers
+  return ( (val/16*10) + (val%16) );
+}
+
+void printDate() {
+  // Reset the register pointer
+  Wire.beginTransmission(DS1307_ADDRESS);
+
+  byte zero = 0x00;
+  Wire.write(zero);
+  Wire.endTransmission();
+
+  Wire.requestFrom(DS1307_ADDRESS, 7);
+
+  int second = bcdToDec(Wire.read());
+  int minute = bcdToDec(Wire.read());
+  int hour = bcdToDec(Wire.read() & 0b111111); //24 hour time
+  int weekDay = bcdToDec(Wire.read()); //0-6 -> sunday - Saturday
+  int monthDay = bcdToDec(Wire.read());
+  int month = bcdToDec(Wire.read());
+  int year = bcdToDec(Wire.read());
+
+  //print the date in this format   3/1/11 23:59:59
+  Serial.print(month);
+  Serial.print("/");
+  Serial.print(monthDay);
+  Serial.print("/");
+  Serial.print(year);
+  Serial.print(" ");
+  Serial.print(hour);
+  Serial.print(":");
+  Serial.print(minute);
+  Serial.print(":");
+  Serial.println(second);
+}
+
+//------------------------------INTERRUPT SERVICE ROUTINE------------
+ISR(TIMER1_COMPA_vect) {
+ printDate(); 
+}
